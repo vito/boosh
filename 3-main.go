@@ -175,9 +175,15 @@ func main() {
 			})
 		}
 
+		securityGroups := []interface{}{}
+		for _, group := range x.SecurityGroups {
+			securityGroups = append(securityGroups, ref(group+"SecurityGroup"))
+		}
+
 		resources[x.Name+"LoadBalancer"] = LoadBalancer{
-			Subnets:   subnets,
-			Listeners: listeners,
+			Subnets:        subnets,
+			Listeners:      listeners,
+			SecurityGroups: securityGroups,
 			HealthCheck: LoadBalancerHealthCheck{
 				Target:             x.HealthCheck.Target.Type + ":" + x.HealthCheck.Target.Port,
 				Timeout:            x.HealthCheck.Timeout,
