@@ -1,0 +1,126 @@
+---
+name: ketchup
+
+meta:
+  vpc:
+    base: "10.11"
+
+  availability_zones:
+    - us-east-1a
+    - us-east-1b
+
+vpc:
+  cidr: (( meta.vpc.base ".0.0/16" ))
+  internet_gateway: VPCGateway
+
+internet_gateways:
+  - name: VPCGateway
+
+subnets:
+  - name: BOSHZ1
+    cidr: (( meta.vpc.base ".0.0/24" ))
+    availability_zone: (( meta.availability_zones.[0] ))
+    route_table:
+      internet_gateway: VPCGateway
+    nat:
+      name: NATZ1
+      type: m1.small
+      ip: (( meta.vpc.base ".0.10" ))
+      key_pair_name: bosh
+      security_group: Open
+  - name: CFELBZ1
+    cidr: (( meta.vpc.base ".2.0/24" ))
+    availability_zone: (( meta.availability_zones.[0] ))
+    route_table:
+      internet_gateway: VPCGateway
+  - name: CFZ1
+    cidr: (( meta.vpc.base ".16.0/20" ))
+    availability_zone: (( meta.availability_zones.[0] ))
+    route_table:
+      nat: NATZ1
+  - name: BOSHZ2
+    cidr: (( meta.vpc.base ".64.0/24" ))
+    availability_zone: (( meta.availability_zones.[0] ))
+    route_table:
+      internet_gateway: VPCGateway
+    nat:
+      name: NATZ2
+      type: m1.small
+      ip: (( meta.vpc.base ".64.10" ))
+      key_pair_name: bosh
+      security_group: Open
+  - name: CFELBZ2
+    cidr: (( meta.vpc.base ".66.0/24" ))
+    availability_zone: (( meta.availability_zones.[1] ))
+    route_table:
+      internet_gateway: VPCGateway
+  - name: CFZ2
+    cidr: (( meta.vpc.base ".80.0/20" ))
+    availability_zone: (( meta.availability_zones.[1] ))
+    route_table:
+      instance: NATZ2
+
+dns:
+  - (( meta.vpc.base ".0.2" ))
+  - (( meta.vpc.base ".0.6" ))
+
+security_groups:
+  - name: Open
+    ingress:
+      - protocol: tcp
+        ports: 0-65535
+        cidr: 0.0.0.0/0
+      - protocol: udp
+        ports: 0-65535
+        cidr: 0.0.0.0/0
+
+  - name: Internal
+    ingress:
+      - protocol: tcp
+        ports: 0-65535
+        cidr: 0.0.0.0/0
+      - protocol: udp
+        ports: 0-65535
+        cidr: 0.0.0.0/0
+
+  - name: Web
+    ingress:
+      - protocol: tcp
+        cidr: 0.0.0.0/0
+        ports: 80
+      - protocol: tcp
+        cidr: 0.0.0.0/0
+        ports: 8080
+      - protocol: tcp
+        cidr: 0.0.0.0/0
+        ports: 443
+      - protocol: tcp
+        cidr: 0.0.0.0/0
+        ports: 4443
+
+load_balancers:
+  - name: CFELB
+
+    listeners:
+      - protocol: tcp
+        port: 80
+      - protocol: tcp
+        port: 8080
+        destination_protocol: tcp
+        destination_port: 8080
+
+    health_check:
+      target:
+        type: tcp
+        port: 80
+      timeout: 5
+      interval: 30
+      healthy_threshold: 10
+      unhealthy_threshold: 2
+
+    subnets:
+      - CFELBZ1
+      - CFELBZ2
+
+    security_groups:
+      - Web
