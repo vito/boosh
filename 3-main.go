@@ -30,9 +30,9 @@ func main() {
 
 	candiedyaml.NewDecoder(file).Decode(&spec)
 
-	resources := make(map[string]Typer)
+	resources := make(Resources)
 
-	resources["VPC"] = Vpc{
+	resources["VPC"] = VPC{
 		CidrBlock: spec.VPC.CIDR,
 	}
 
@@ -76,12 +76,14 @@ func main() {
 					DestinationCidrBlock: "0.0.0.0/0",
 					RouteTableId:         ref(x.Name + "SubnetRouteTable"),
 					InstanceId:           ref(*x.RouteTable.Instance + "NATInstance"),
+					Depends:              "VPCInternetGateway",
 				}
 			} else if x.RouteTable.InternetGateway != nil {
 				resources[x.Name+"SubnetRoute"] = Route{
 					DestinationCidrBlock: "0.0.0.0/0",
 					RouteTableId:         ref(x.Name + "SubnetRouteTable"),
 					GatewayId:            ref(*x.RouteTable.InternetGateway + "InternetGateway"),
+					Depends:              "VPCInternetGateway",
 				}
 			}
 
@@ -98,6 +100,7 @@ func main() {
 				PrivateIpAddress: x.NAT.IP,
 				KeyName:          x.NAT.KeyPairName,
 				SubnetId:         ref(x.Name + "Subnet"),
+				SourceDestCheck:  false,
 				ImageId: Hash{
 					"Fn::FindInMap": []interface{}{
 						"AWSNATAMI",
@@ -111,6 +114,12 @@ func main() {
 				Tags: []interface{}{
 					Tag{Key: "Name", Value: x.NAT.Name},
 				},
+			}
+
+			resources[x.NAT.Name+"EIP"] = EIP{
+				Domain:     "vpc",
+				InstanceId: ref(x.NAT.Name + "NATInstance"),
+				Depends:    "VPCInternetGateway",
 			}
 		}
 	}

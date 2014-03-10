@@ -5,11 +5,12 @@ import (
 	"strings"
 )
 
-// base types
 type Hash map[string]interface{}
 type List []interface{}
 
-// special types
+func ref(i interface{}) Hash {
+	return Hash{"Ref": i}
+}
 
 type Template struct {
 	AWSTemplateFormatVersion string
@@ -18,22 +19,77 @@ type Template struct {
 	Mappings                 Hash
 }
 
-type Typer interface {
+type Tag struct {
+	Key   string `json:"Key,omitempty"`
+	Value string `json:"Value,omitempty"`
+}
+
+type Resources map[string]Resource
+
+func (r Resources) MarshalJSON() ([]byte, error) {
+	lines := []string{}
+	for k, v := range r {
+		kj, e := json.Marshal(k)
+		if e != nil {
+			return nil, e
+		}
+
+		p := map[string]interface{}{
+			"Type": v.Type(),
+		}
+
+		if v.DependsOn() != "" {
+			p["DependsOn"] = v.DependsOn()
+		}
+
+		vj, e := json.Marshal(v)
+		if e != nil {
+			return nil, e
+		}
+
+		if string(vj) != "{}" {
+			p["Properties"] = v
+		}
+
+		pj, e := json.Marshal(p)
+		if e != nil {
+			return nil, e
+		}
+
+		lines = append(lines, string(kj)+": "+string(pj))
+	}
+	return []byte("{" + strings.Join(lines, ",\n") + "}"), nil
+}
+
+type Resource interface {
 	Type() string
+	DependsOn() string
 }
 
 type InternetGateway struct {
 }
 
-func (g InternetGateway) Type() string {
+func (InternetGateway) Type() string {
 	return "AWS::EC2::InternetGateway"
 }
 
-type Vpc struct {
+func (InternetGateway) DependsOn() string {
+	return ""
+}
+
+type VPC struct {
 	CidrBlock        interface{} `json:"CidrBlock,omitempty"`
 	EnableDnsSupport interface{} `json:"EnableDnsSupport,omitempty"`
 	InstanceTenancy  interface{} `json:"InstanceTenancy,omitempty"`
 	Tags             interface{} `json:"Tags,omitempty"`
+}
+
+func (VPC) Type() string {
+	return "AWS::EC2::VPC"
+}
+
+func (VPC) DependsOn() string {
+	return ""
 }
 
 type VPCGatewayAttachment struct {
@@ -41,8 +97,24 @@ type VPCGatewayAttachment struct {
 	VpcId             interface{} `json:"VpcId,omitempty"`
 }
 
+func (VPCGatewayAttachment) Type() string {
+	return "AWS::EC2::VPCGatewayAttachment"
+}
+
+func (VPCGatewayAttachment) DependsOn() string {
+	return ""
+}
+
 type RouteTable struct {
 	VpcId interface{} `json:"VpcId,omitempty"`
+}
+
+func (RouteTable) Type() string {
+	return "AWS::EC2::RouteTable"
+}
+
+func (RouteTable) DependsOn() string {
+	return ""
 }
 
 type SecurityGroup struct {
@@ -51,10 +123,6 @@ type SecurityGroup struct {
 	SecurityGroupIngress interface{} `json:"SecurityGroupIngress,omitempty"`
 	VpcId                interface{} `json:"VpcId,omitempty"`
 	Tags                 interface{} `json:"Tags,omitempty"`
-}
-
-func (s SecurityGroup) Type() string {
-	return "AWS::EC2::SecurityGroup"
 }
 
 type SecurityGroupEgress struct {
@@ -75,12 +143,12 @@ type SecurityGroupIngress struct {
 	ToPort                     interface{} `json:"ToPort,omitempty"`
 }
 
-func (r RouteTable) Type() string {
-	return "AWS::EC2::RouteTable"
+func (SecurityGroup) Type() string {
+	return "AWS::EC2::SecurityGroup"
 }
 
-func (e VPCGatewayAttachment) Type() string {
-	return "AWS::EC2::VPCGatewayAttachment"
+func (SecurityGroup) DependsOn() string {
+	return ""
 }
 
 type LoadBalancer struct {
@@ -89,10 +157,6 @@ type LoadBalancer struct {
 	Instances      interface{} `json:"Instances,omitempty"`
 	SecurityGroups interface{} `json:"SecurityGroups,omitempty"`
 	Listeners      interface{} `json:"Listeners,omitempty"`
-}
-
-func (r LoadBalancer) Type() string {
-	return "AWS::ElasticLoadBalancing::LoadBalancer"
 }
 
 type LoadBalancerHealthCheck struct {
@@ -110,16 +174,29 @@ type LoadBalancerListener struct {
 	InstanceProtocol string `json:"InstanceProtocol,omitempty"`
 }
 
+func (LoadBalancer) Type() string {
+	return "AWS::ElasticLoadBalancing::LoadBalancer"
+}
+
+func (LoadBalancer) DependsOn() string {
+	return ""
+}
+
 type Route struct {
 	DestinationCidrBlock interface{} `json:"DestinationCidrBlock,omitempty"`
 	GatewayId            interface{} `json:"GatewayId,omitempty"`
 	RouteTableId         interface{} `json:"RouteTableId,omitempty"`
 	InstanceId           interface{} `json:"InstanceId,omitempty"`
 	NetworkInterfaceId   interface{} `json:"NetworkInterfaceId,omitempty"`
+	Depends              string      `json:"-"`
 }
 
-func (r Route) Type() string {
+func (Route) Type() string {
 	return "AWS::EC2::Route"
+}
+
+func (route Route) DependsOn() string {
+	return route.Depends
 }
 
 type Subnet struct {
@@ -129,44 +206,25 @@ type Subnet struct {
 	Tags             interface{} `json:"Tags,omitempty"`
 }
 
+func (Subnet) Type() string {
+	return "AWS::EC2::Subnet"
+}
+
+func (Subnet) DependsOn() string {
+	return ""
+}
+
 type SubnetRouteTableAssociation struct {
 	RouteTableId interface{} `json:"RouteTableId,omitempty"`
 	SubnetId     interface{} `json:"SubnetId,omitempty"`
 }
 
-func (s SubnetRouteTableAssociation) Type() string {
+func (SubnetRouteTableAssociation) Type() string {
 	return "AWS::EC2::SubnetRouteTableAssociation"
 }
 
-func (s Subnet) Type() string {
-	return "AWS::EC2::Subnet"
-}
-
-func (r Resources) MarshalJSON() ([]byte, error) {
-	lines := []string{}
-	for k, v := range r {
-		kj, e := json.Marshal(k)
-		if e != nil {
-			return nil, e
-		}
-		p := map[string]interface{}{
-			"Type": v.Type(),
-		}
-		vj, e := json.Marshal(v)
-		if e != nil {
-			return nil, e
-		}
-		if string(vj) != "{}" {
-			p["Properties"] = v
-		}
-		pj, e := json.Marshal(p)
-		lines = append(lines, string(kj)+": "+string(pj))
-	}
-	return []byte("{" + strings.Join(lines, ",\n") + "}"), nil
-}
-
-func (v Vpc) Type() string {
-	return "AWS::EC2::VPC"
+func (SubnetRouteTableAssociation) DependsOn() string {
+	return ""
 }
 
 type Instance struct {
@@ -194,10 +252,6 @@ type Instance struct {
 	Volumes               interface{} `json:"Volumes,omitempty"`
 }
 
-func (i Instance) Type() string {
-	return "AWS::EC2::Instance"
-}
-
 type NetworkInterface struct {
 	AssociatePublicIpAddress       interface{} `json:"AssociatePublicIpAddress,omitempty"`
 	DeleteOnTermination            interface{} `json:"DeleteOnTermination,omitempty"`
@@ -211,6 +265,14 @@ type NetworkInterface struct {
 	SubnetId                       interface{} `json:"SubnetId,omitempty"`
 }
 
+func (Instance) Type() string {
+	return "AWS::EC2::Instance"
+}
+
+func (Instance) DependsOn() string {
+	return ""
+}
+
 type DHCPOptions struct {
 	DomainName         interface{} `json:"DomainName,omitempty"`
 	DomainNameServers  interface{} `json:"DomainNameServers,omitempty"`
@@ -220,8 +282,12 @@ type DHCPOptions struct {
 	Tags               interface{} `json:"Tags,omitempty"`
 }
 
-func (d DHCPOptions) Type() string {
+func (DHCPOptions) Type() string {
 	return "AWS::EC2::DHCPOptions"
+}
+
+func (DHCPOptions) DependsOn() string {
+	return ""
 }
 
 type VPCDHCPOptionsAssociation struct {
@@ -229,17 +295,24 @@ type VPCDHCPOptionsAssociation struct {
 	DhcpOptionsId interface{} `json:"DhcpOptionsId,omitempty"`
 }
 
-func (v VPCDHCPOptionsAssociation) Type() string {
+func (VPCDHCPOptionsAssociation) Type() string {
 	return "AWS::EC2::VPCDHCPOptionsAssociation"
 }
 
-type Tag struct {
-	Key   string `json:"Key,omitempty"`
-	Value string `json:"Value,omitempty"`
+func (VPCDHCPOptionsAssociation) DependsOn() string {
+	return ""
 }
 
-type Resources map[string]Typer
+type EIP struct {
+	Domain     interface{} `json:"Domain,omitempty"`
+	InstanceId interface{} `json:"InstanceId,omitempty"`
+	Depends    string      `json:"-"`
+}
 
-func ref(i interface{}) Hash {
-	return Hash{"Ref": i}
+func (EIP) Type() string {
+	return "AWS::EC2::EIP"
+}
+
+func (eip EIP) DependsOn() string {
+	return eip.Depends
 }
