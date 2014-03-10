@@ -16,4 +16,4 @@ visualizing the infrastructure:
 cat cloudformation.json | ./cfviz | dot -Tpng -o drone.png
 ```
 
-you'll probably want to delete your stack after; this costs ~$40/mo.
+you'll probably want to delete your stack after; this costs ~$100/mo.
