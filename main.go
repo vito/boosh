@@ -214,7 +214,7 @@ func main() {
 
 	template := &Template{
 		AWSTemplateFormatVersion: "2010-09-09",
-		Description:              "lol",
+		Description:              spec.Name,
 
 		Resources: resources,
 
