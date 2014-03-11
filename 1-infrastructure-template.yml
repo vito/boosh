@@ -1,6 +1,4 @@
 ---
-name: ketchup
-
 meta:
   vpc:
     base: "10.11"
@@ -28,12 +26,12 @@ subnets:
       ip: (( meta.vpc.base ".0.10" ))
       key_pair_name: bosh
       security_group: Open
-  - name: CFELBZ1
+  - name: DRONEELBZ1
     cidr: (( meta.vpc.base ".2.0/24" ))
     availability_zone: (( meta.availability_zones.[0] ))
     route_table:
       internet_gateway: VPCGateway
-  - name: CFZ1
+  - name: DRONEZ1
     cidr: (( meta.vpc.base ".16.0/20" ))
     availability_zone: (( meta.availability_zones.[0] ))
     route_table:
@@ -49,12 +47,12 @@ subnets:
       ip: (( meta.vpc.base ".64.10" ))
       key_pair_name: bosh
       security_group: Open
-  - name: CFELBZ2
+  - name: DRONEELBZ2
     cidr: (( meta.vpc.base ".66.0/24" ))
     availability_zone: (( meta.availability_zones.[1] ))
     route_table:
       internet_gateway: VPCGateway
-  - name: CFZ2
+  - name: DRONEZ2
     cidr: (( meta.vpc.base ".80.0/20" ))
     availability_zone: (( meta.availability_zones.[1] ))
     route_table:
@@ -99,7 +97,7 @@ security_groups:
         ports: 4443
 
 load_balancers:
-  - name: CFELB
+  - name: DRONEELB
 
     listeners:
       - protocol: tcp
@@ -119,8 +117,8 @@ load_balancers:
       unhealthy_threshold: 2
 
     subnets:
-      - CFELBZ1
-      - CFELBZ2
+      - DRONEELBZ1
+      - DRONEELBZ2
 
     security_groups:
       - Web
