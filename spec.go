@@ -1,7 +1,8 @@
 package main
 
 type DeploymentSpec struct {
-	Name string `yaml:"name"`
+	Name   string `yaml:"name"`
+	Domain string `yaml:"domain"`
 
 	VPC VPCSpec `yaml:"vpc"`
 
@@ -14,6 +15,8 @@ type DeploymentSpec struct {
 	SecurityGroups []SecurityGroupSpec `yaml:"security_groups"`
 
 	LoadBalancers []LoadBalancerSpec `yaml:"load_balancers"`
+
+	ElasticIPs []ElasticIPSpec `yaml:"elastic_ips"`
 }
 
 type VPCSpec struct {
@@ -62,6 +65,7 @@ type SecurityGroupEntrySpec struct {
 
 type LoadBalancerSpec struct {
 	Name           string                      `yaml:"name"`
+	DNSRecord      string                      `yaml:"dns_record"`
 	Listeners      []LoadBalancerListenerSpec  `yaml:"listeners"`
 	HealthCheck    LoadBalancerHealthCheckSpec `yaml:"health_check"`
 	Subnets        []string                    `yaml:"subnets"`
@@ -86,4 +90,9 @@ type LoadBalancerHealthCheckSpec struct {
 type LoadBalancerHealthCheckTargetSpec struct {
 	Type string `yaml:"type"`
 	Port string `yaml:"port"`
+}
+
+type ElasticIPSpec struct {
+	Name      string `yaml:"name"`
+	DNSRecord string `yaml:"dns_record"`
 }
