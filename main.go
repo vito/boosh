@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"strings"
 
@@ -23,12 +24,20 @@ var NAT_AMIS = map[string]string{
 func main() {
 	var spec DeploymentSpec
 
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		panic(err)
+	var source io.Reader
+
+	if len(os.Args) > 1 {
+		file, err := os.Open(os.Args[1])
+		if err != nil {
+			panic(err)
+		}
+
+		source = file
+	} else {
+		source = os.Stdin
 	}
 
-	candiedyaml.NewDecoder(file).Decode(&spec)
+	candiedyaml.NewDecoder(source).Decode(&spec)
 
 	resources := make(Resources)
 
