@@ -210,6 +210,35 @@ func main() {
 				UnhealthyThreshold: x.HealthCheck.UnhealthyThreshold,
 			},
 		}
+
+		resources[x.Name+"LoadBalancerRecordSet"] = RecordSetGroup{
+			HostedZoneName: spec.Domain + ".",
+			RecordSets: []RecordSet{
+				{Name: "*." + spec.Domain + ".",
+					Type: "A",
+					AliasTarget: RecordSetAliasTarget{
+						HostedZoneId: Hash{
+							"Fn::GetAtt": []string{
+								x.Name + "LoadBalancer",
+								"CanonicalHostedZoneNameID",
+							},
+						},
+						DNSName: Hash{
+							"Fn::GetAtt": []string{
+								x.Name + "LoadBalancer",
+								"CanonicalHostedZoneName",
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	for _, x := range spec.ElasticIPs {
+		resources[x.Name+"ElasticIP"] = EIP{
+			Domain: "vpc",
+		}
 	}
 
 	template := &Template{

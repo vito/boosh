@@ -316,3 +316,27 @@ func (EIP) Type() string {
 func (eip EIP) DependsOn() string {
 	return eip.Depends
 }
+
+type RecordSetGroup struct {
+	HostedZoneName interface{} `json:"HostedZoneName,omitempty"`
+	RecordSets     interface{} `json:"RecordSets,omitempty"`
+}
+
+func (RecordSetGroup) Type() string {
+	return "AWS::Route53::RecordSetGroup"
+}
+
+func (RecordSetGroup) DependsOn() string {
+	return ""
+}
+
+type RecordSet struct {
+	Name        interface{} `json:"Name,omitempty"`
+	Type        interface{} `json:"Type,omitempty"`
+	AliasTarget interface{} `json:"AliasTarget,omitempty"`
+}
+
+type RecordSetAliasTarget struct {
+	HostedZoneId interface{} `json:"HostedZoneId,omitempty"`
+	DNSName      interface{} `json:"DNSName,omitempty"`
+}
