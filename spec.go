@@ -10,7 +10,7 @@ type DeploymentSpec struct {
 
 	Subnets []SubnetSpec `yaml:"subnets"`
 
-	DNS []DNSSpec `yaml:"dns"`
+	DNS []string `yaml:"dns"`
 
 	SecurityGroups []SecurityGroupSpec `yaml:"security_groups"`
 
@@ -40,8 +40,6 @@ type RouteTableSpec struct {
 	InternetGateway *string `yaml:"internet_gateway,omitempty"`
 	Instance        *string `yaml:"instance,omitempty"`
 }
-
-type DNSSpec string
 
 type SubnetNATSpec struct {
 	Name          string `yaml:"name"`
@@ -74,22 +72,22 @@ type LoadBalancerSpec struct {
 
 type LoadBalancerListenerSpec struct {
 	Protocol            string  `yaml:"protocol"`
-	Port                string  `yaml:"port"`
+	Port                uint16  `yaml:"port"`
 	DestinationProtocol *string `yaml:"destination_protocol,omitempty"`
-	DestinationPort     *string `yaml:"destination_port,omitempty"`
+	DestinationPort     *uint16 `yaml:"destination_port,omitempty"`
 }
 
 type LoadBalancerHealthCheckSpec struct {
 	Target             LoadBalancerHealthCheckTargetSpec `yaml:"target"`
-	Timeout            string                            `yaml:"timeout"`
-	Interval           string                            `yaml:"interval"`
-	HealthyThreshold   string                            `yaml:"healthy_threshold"`
-	UnhealthyThreshold string                            `yaml:"unhealthy_threshold"`
+	Timeout            int                               `yaml:"timeout"`
+	Interval           int                               `yaml:"interval"`
+	HealthyThreshold   int                               `yaml:"healthy_threshold"`
+	UnhealthyThreshold int                               `yaml:"unhealthy_threshold"`
 }
 
 type LoadBalancerHealthCheckTargetSpec struct {
 	Type string `yaml:"type"`
-	Port string `yaml:"port"`
+	Port uint16 `yaml:"port"`
 }
 
 type ElasticIPSpec struct {

@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fraenkel/candiedyaml"
+	"github.com/vito/cloudformer"
+	"github.com/vito/cloudformer/aws"
 )
 
 // amzn-ami-vpc-nat-pv-2013.09.0.x86_64-ebs
@@ -22,6 +26,16 @@ var NAT_AMIS = map[string]string{
 }
 
 func main() {
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	natAMI, found := NAT_AMIS[region]
+	if !found {
+		panic("unknown region: " + region)
+	}
+
 	var spec DeploymentSpec
 
 	var source io.Reader
@@ -37,143 +51,145 @@ func main() {
 		source = os.Stdin
 	}
 
-	candiedyaml.NewDecoder(source).Decode(&spec)
-
-	resources := make(Resources)
-
-	resources["VPC"] = VPC{
-		CidrBlock: spec.VPC.CIDR,
+	err := candiedyaml.NewDecoder(source).Decode(&spec)
+	if err != nil {
+		panic(err)
 	}
 
-	resources["VPCInternetGateway"] = VPCGatewayAttachment{
-		InternetGatewayId: ref(spec.VPC.InternetGateway + "InternetGateway"),
-		VpcId:             ref("VPC"),
-	}
+	former := aws.New(spec.Name)
 
-	if len(spec.DNS) > 0 {
-		resources["DHCPOptions"] = DHCPOptions{
-			DomainNameServers: spec.DNS,
-		}
+	instances := make(map[string]cloudformer.Instance)
+	gateways := make(map[string]cloudformer.InternetGateway)
+	subnets := make(map[string]cloudformer.Subnet)
+	securityGroups := make(map[string]cloudformer.SecurityGroup)
 
-		resources["VPCDHCPOptionsAssociation"] = VPCDHCPOptionsAssociation{
-			VpcId:         ref("VPC"),
-			DhcpOptionsId: ref("DHCPOptions"),
-		}
-	}
+	vpc := former.VPC("")
+	vpc.Network(cloudformer.CIDR(spec.VPC.CIDR))
+
+	vpc.AssociateDHCPOptions(cloudformer.DHCPOptions{
+		DomainNameServers: spec.DNS,
+	})
 
 	for _, x := range spec.InternetGateways {
-		resources[x.Name+"InternetGateway"] = InternetGateway{}
+		gateways[x.Name] = former.InternetGateway(x.Name)
 	}
 
-	for _, x := range spec.Subnets {
-		resources[x.Name+"Subnet"] = Subnet{
-			AvailabilityZone: x.AvailabilityZone,
-			CidrBlock:        x.CIDR,
-			VpcId:            ref("VPC"),
-			Tags: []interface{}{
-				Tag{Key: "Name", Value: x.Name},
-			},
-		}
-
-		if x.RouteTable != nil {
-			resources[x.Name+"SubnetRouteTable"] = RouteTable{
-				VpcId: ref("VPC"),
-			}
-
-			if x.RouteTable.Instance != nil {
-				resources[x.Name+"SubnetRoute"] = Route{
-					DestinationCidrBlock: "0.0.0.0/0",
-					RouteTableId:         ref(x.Name + "SubnetRouteTable"),
-					InstanceId:           ref(*x.RouteTable.Instance + "NATInstance"),
-					Depends:              "VPCInternetGateway",
-				}
-			} else if x.RouteTable.InternetGateway != nil {
-				resources[x.Name+"SubnetRoute"] = Route{
-					DestinationCidrBlock: "0.0.0.0/0",
-					RouteTableId:         ref(x.Name + "SubnetRouteTable"),
-					GatewayId:            ref(*x.RouteTable.InternetGateway + "InternetGateway"),
-					Depends:              "VPCInternetGateway",
-				}
-			}
-
-			resources[x.Name+"SubnetRouteTableAssociation"] = SubnetRouteTableAssociation{
-				RouteTableId: ref(x.Name + "SubnetRouteTable"),
-				SubnetId:     ref(x.Name + "Subnet"),
-			}
-		}
-
-		if x.NAT != nil {
-			resources[x.NAT.Name+"NATInstance"] = Instance{
-				AvailabilityZone: x.AvailabilityZone,
-				InstanceType:     x.NAT.InstanceType,
-				PrivateIpAddress: x.NAT.IP,
-				KeyName:          x.NAT.KeyPairName,
-				SubnetId:         ref(x.Name + "Subnet"),
-				SourceDestCheck:  false,
-				ImageId: Hash{
-					"Fn::FindInMap": []interface{}{
-						"AWSNATAMI",
-						ref("AWS::Region"),
-						"AMI",
-					},
-				},
-				SecurityGroupIds: []interface{}{
-					ref(x.NAT.SecurityGroup + "SecurityGroup"),
-				},
-				Tags: []interface{}{
-					Tag{Key: "Name", Value: x.NAT.Name},
-				},
-			}
-
-			resources[x.NAT.Name+"EIP"] = EIP{
-				Domain:     "vpc",
-				InstanceId: ref(x.NAT.Name + "NATInstance"),
-				Depends:    "VPCInternetGateway",
-			}
-		}
+	vpcGateway, found := gateways[spec.VPC.InternetGateway]
+	if !found {
+		panic("unknown gateway for VPC: " + spec.VPC.InternetGateway)
 	}
+
+	vpc.AttachInternetGateway(vpcGateway)
 
 	for _, x := range spec.SecurityGroups {
-		ingress := []interface{}{}
-		egress := []interface{}{}
+		group := vpc.SecurityGroup(x.Name)
 
 		for _, i := range x.Ingress {
 			fromPort, toPort := parsePortRange(i.Ports)
 
-			ingress = append(ingress, SecurityGroupIngress{
-				CidrIp:     i.CIDR,
-				IpProtocol: i.Protocol,
-				FromPort:   fromPort,
-				ToPort:     toPort,
-			})
+			group.Ingress(
+				cloudformer.ProtocolType(i.Protocol),
+				cloudformer.CIDR(i.CIDR),
+				fromPort,
+				toPort,
+			)
 		}
 
 		for _, e := range x.Egress {
 			fromPort, toPort := parsePortRange(e.Ports)
 
-			ingress = append(ingress, SecurityGroupEgress{
-				CidrIp:     e.CIDR,
-				IpProtocol: e.Protocol,
-				FromPort:   fromPort,
-				ToPort:     toPort,
-			})
+			group.Egress(
+				cloudformer.ProtocolType(e.Protocol),
+				cloudformer.CIDR(e.CIDR),
+				fromPort,
+				toPort,
+			)
 		}
 
-		resources[x.Name+"SecurityGroup"] = SecurityGroup{
-			GroupDescription:     x.Name,
-			VpcId:                ref("VPC"),
-			SecurityGroupIngress: ingress,
-			SecurityGroupEgress:  egress,
+		securityGroups[x.Name] = group
+	}
+
+	for _, x := range spec.Subnets {
+		if x.NAT == nil {
+			continue
 		}
+
+		if x.RouteTable != nil && x.RouteTable.Instance != nil {
+			continue
+		}
+
+		subnet := vpc.Subnet(x.Name)
+		subnet.Network(cloudformer.CIDR(x.CIDR))
+		subnet.AvailabilityZone(x.AvailabilityZone)
+
+		if x.RouteTable != nil {
+			if x.RouteTable.InternetGateway != nil {
+				gateway, found := gateways[*x.RouteTable.InternetGateway]
+				if !found {
+					panic("unknown gateway: " + *x.RouteTable.InternetGateway)
+				}
+
+				subnet.RouteTable().InternetGateway(gateway)
+			}
+		}
+
+		nat := subnet.Instance(x.NAT.Name)
+		nat.Type(x.NAT.InstanceType)
+		nat.PrivateIP(cloudformer.IP(x.NAT.IP))
+		nat.KeyPair(x.NAT.KeyPairName)
+		nat.Image(natAMI)
+		nat.SourceDestCheck(false)
+
+		securityGroup, found := securityGroups[x.NAT.SecurityGroup]
+		if !found {
+			panic("unknown security group: " + x.NAT.SecurityGroup)
+		}
+
+		nat.SecurityGroup(securityGroup)
+
+		ip := former.ElasticIP("NAT")
+		ip.Domain("vpc")
+		ip.AttachTo(nat)
+
+		instances[x.NAT.Name] = nat
+		subnets[x.Name] = subnet
+	}
+
+	for _, x := range spec.Subnets {
+		if x.NAT != nil {
+			continue
+		}
+
+		subnet := vpc.Subnet(x.Name)
+		subnet.Network(cloudformer.CIDR(x.CIDR))
+		subnet.AvailabilityZone(x.AvailabilityZone)
+
+		if x.RouteTable != nil {
+			if x.RouteTable.Instance != nil {
+				instance, found := instances[*x.RouteTable.Instance]
+				if !found {
+					panic("unknown instance: " + *x.RouteTable.Instance)
+				}
+
+				subnet.RouteTable().Instance(instance)
+			}
+		}
+
+		subnets[x.Name] = subnet
 	}
 
 	for _, x := range spec.LoadBalancers {
-		subnets := []interface{}{}
+		balancer := former.LoadBalancer(x.Name)
+
 		for _, name := range x.Subnets {
-			subnets = append(subnets, ref(name+"Subnet"))
+			subnet, found := subnets[name]
+			if !found {
+				panic("unknown subnet: " + name)
+			}
+
+			balancer.Subnet(subnet)
 		}
 
-		listeners := []interface{}{}
 		for _, listener := range x.Listeners {
 			destinationPort := listener.Port
 			if listener.DestinationPort != nil {
@@ -185,117 +201,67 @@ func main() {
 				destinationProtocol = *listener.DestinationProtocol
 			}
 
-			listeners = append(listeners, LoadBalancerListener{
-				LoadBalancerPort: listener.Port,
-				Protocol:         listener.Protocol,
-				InstancePort:     destinationPort,
-				InstanceProtocol: destinationProtocol,
-			})
+			balancer.Listener(
+				cloudformer.ProtocolType(listener.Protocol),
+				listener.Port,
+				cloudformer.ProtocolType(destinationProtocol),
+				destinationPort,
+			)
 		}
 
-		securityGroups := []interface{}{}
-		for _, group := range x.SecurityGroups {
-			securityGroups = append(securityGroups, ref(group+"SecurityGroup"))
+		for _, name := range x.SecurityGroups {
+			securityGroup, found := securityGroups[name]
+			if !found {
+				panic("unknown security group: " + name)
+			}
+
+			balancer.SecurityGroup(securityGroup)
 		}
 
-		resources[x.Name+"LoadBalancer"] = LoadBalancer{
-			Subnets:        subnets,
-			Listeners:      listeners,
-			SecurityGroups: securityGroups,
-			HealthCheck: LoadBalancerHealthCheck{
-				Target:             x.HealthCheck.Target.Type + ":" + x.HealthCheck.Target.Port,
-				Timeout:            x.HealthCheck.Timeout,
-				Interval:           x.HealthCheck.Interval,
-				HealthyThreshold:   x.HealthCheck.HealthyThreshold,
-				UnhealthyThreshold: x.HealthCheck.UnhealthyThreshold,
-			},
-		}
+		balancer.HealthCheck(cloudformer.HealthCheck{
+			Protocol:           cloudformer.ProtocolType(x.HealthCheck.Target.Type),
+			Port:               x.HealthCheck.Target.Port,
+			Interval:           time.Duration(x.HealthCheck.Interval) * time.Second,
+			Timeout:            time.Duration(x.HealthCheck.Timeout) * time.Second,
+			HealthyThreshold:   x.HealthCheck.HealthyThreshold,
+			UnhealthyThreshold: x.HealthCheck.UnhealthyThreshold,
+		})
 
-		resources[x.Name+"LoadBalancerRecordSet"] = RecordSetGroup{
-			HostedZoneName: spec.Domain + ".",
-			RecordSets: []RecordSet{
-				{Name: "*." + spec.Domain + ".",
-					Type: "A",
-					AliasTarget: RecordSetAliasTarget{
-						HostedZoneId: Hash{
-							"Fn::GetAtt": []string{
-								x.Name + "LoadBalancer",
-								"CanonicalHostedZoneNameID",
-							},
-						},
-						DNSName: Hash{
-							"Fn::GetAtt": []string{
-								x.Name + "LoadBalancer",
-								"CanonicalHostedZoneName",
-							},
-						},
-					},
-				},
-			},
+		if x.DNSRecord != "" {
+			balancer.RecordSet(x.DNSRecord, spec.Domain)
 		}
 	}
 
 	for _, x := range spec.ElasticIPs {
-		resources[x.Name+"ElasticIP"] = EIP{
-			Domain: "vpc",
-		}
+		former.ElasticIP(x.Name).Domain("vpc")
 	}
 
-	template := &Template{
-		AWSTemplateFormatVersion: "2010-09-09",
-		Description:              spec.Name,
-
-		Resources: resources,
-
-		Mappings: Hash{
-			"AWSNATAMI": Hash{
-				"us-east-1": Hash{
-					"AMI": NAT_AMIS["us-east-1"],
-				},
-				"us-west-1": Hash{
-					"AMI": NAT_AMIS["us-west-1"],
-				},
-				"us-west-2": Hash{
-					"AMI": NAT_AMIS["us-west-2"],
-				},
-				"eu-west-1": Hash{
-					"AMI": NAT_AMIS["eu-west-1"],
-				},
-				"ap-southeast-1": Hash{
-					"AMI": NAT_AMIS["ap-southeast-1"],
-				},
-				"ap-southeast-2": Hash{
-					"AMI": NAT_AMIS["ap-southeast-2"],
-				},
-				"ap-northeast-1": Hash{
-					"AMI": NAT_AMIS["ap-northeast-1"],
-				},
-				"sa-east-1": Hash{
-					"AMI": NAT_AMIS["sa-east-1"],
-				},
-			},
-		},
-	}
-
-	json.NewEncoder(os.Stdout).Encode(template)
+	json.NewEncoder(os.Stdout).Encode(former.Template)
 }
 
-func parsePortRange(ports string) (string, string) {
+func parsePortRange(ports string) (uint16, uint16) {
 	segments := strings.Split(ports, "-")
 
-	fromPort := ""
-	toPort := ""
+	fromPortStr := ""
+	toPortStr := ""
 
 	if len(segments) == 1 {
-		fromPort = segments[0]
-		toPort = fromPort
+		fromPortStr = segments[0]
+		toPortStr = fromPortStr
 	} else if len(segments) == 2 {
-		fromPort = segments[0]
-		toPort = segments[1]
+		fromPortStr = segments[0]
+		toPortStr = segments[1]
 	}
 
-	fromPort = strings.Trim(fromPort, " ")
-	toPort = strings.Trim(toPort, " ")
+	fromPort, err := strconv.Atoi(strings.Trim(fromPortStr, " "))
+	if err != nil {
+		panic(err)
+	}
 
-	return fromPort, toPort
+	toPort, err := strconv.Atoi(strings.Trim(toPortStr, " "))
+	if err != nil {
+		panic(err)
+	}
+
+	return uint16(fromPort), uint16(toPort)
 }
