@@ -24,26 +24,16 @@ func renderEvents(events <-chan *cloudformation.StackEvent) bool {
 			ansiterm.ClearLine()
 		}
 
-		var process Process
+		process, progress := parseStatus(status)
 
-		if strings.Contains(status, "ROLLBACK") {
-			process = RollbackProcess
-		} else if strings.Contains(status, "UPDATE") {
-			process = UpdateProcess
-		} else if strings.Contains(status, "DELETE") {
-			process = DeleteProcess
-		} else if strings.Contains(status, "CREATE") {
-			process = CreateProcess
-		}
-
-		if strings.HasSuffix(ev.ResourceStatus, "IN_PROGRESS") {
+		if progress == PendingProgress {
 			inFlight[ev.LogicalResourceId] = process
 		} else {
 			delete(inFlight, ev.LogicalResourceId)
 
 			label := process.CompletedLabel()
 
-			if strings.HasSuffix(status, "FAILED") {
+			if progress == FailedProgress {
 				ok = false
 				fmt.Printf(ansi.Color("%s: %s (%s)\n", "red"), label, ev.LogicalResourceId, ev.ResourceStatusReason)
 			} else {
@@ -83,4 +73,29 @@ func renderInFlight(inFlight map[string]Process) int {
 	}
 
 	return printedLines
+}
+
+func parseStatus(status string) (Process, Progress) {
+	var process Process
+	var progress Progress
+
+	if strings.Contains(status, "ROLLBACK") {
+		process = RollbackProcess
+	} else if strings.Contains(status, "UPDATE") {
+		process = UpdateProcess
+	} else if strings.Contains(status, "DELETE") {
+		process = DeleteProcess
+	} else if strings.Contains(status, "CREATE") {
+		process = CreateProcess
+	}
+
+	if strings.HasSuffix(status, "FAILED") {
+		progress = FailedProgress
+	} else if strings.HasSuffix(status, "COMPLETED") {
+		progress = CompletedProgress
+	} else if strings.HasSuffix(status, "IN_PROGRESS") {
+		progress = PendingProgress
+	}
+
+	return process, progress
 }

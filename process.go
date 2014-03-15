@@ -1,5 +1,14 @@
 package main
 
+type Progress int
+
+const (
+	InvalidProgress Progress = iota
+	PendingProgress
+	CompletedProgress
+	FailedProgress
+)
+
 type Process int
 
 const (
