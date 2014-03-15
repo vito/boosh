@@ -2,14 +2,37 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/dynport/gocloud/aws/cloudformation"
 	"github.com/hotei/ansiterm"
 	"github.com/mgutz/ansi"
+	"github.com/vito/cloudformer/aws/deployer"
 )
 
-func renderEvents(events <-chan *cloudformation.StackEvent) bool {
+func deploy(name string, source io.Reader) {
+	template, err := ioutil.ReadAll(source)
+	if err != nil {
+		fatal(err)
+	}
+
+	deployer := deployer.New(cloudformation.NewFromEnv())
+
+	events, err := deployer.Deploy(name, template)
+	if err != nil {
+		panic(err)
+	}
+
+	ok := streamEvents(events)
+	if !ok {
+		fmt.Println()
+		fatal(ansi.Color("formation failed and was rolled back", "yellow"))
+	}
+}
+
+func streamEvents(events <-chan *cloudformation.StackEvent) bool {
 	ok := true
 
 	inFlight := make(map[string]Process)

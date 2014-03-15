@@ -1,75 +1,85 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/dynport/gocloud/aws/cloudformation"
-	"github.com/fraenkel/candiedyaml"
-	"github.com/mgutz/ansi"
-
-	"github.com/vito/cloudformer/aws"
-	"github.com/vito/cloudformer/aws/deployer"
+	"github.com/codegangsta/cli"
 )
 
 func main() {
-	var spec DeploymentSpec
+	app := cli.NewApp()
+	app.Name = "boosh"
+	app.Usage = "BOOSH Outer Outer Shell"
+	app.Version = "0.0.1"
 
-	var source io.Reader
+	app.Commands = []cli.Command{
+		{
+			Name:      "generate",
+			ShortName: "g",
+			Usage:     "generate a CloudFormation template",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					"manifest",
+					"",
+					"manifest to use to generate a template (default: stdin)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				var source io.Reader
 
-	var err error
+				if c.String("manifest") != "" {
+					file, err := os.Open(c.String("manifest"))
+					if err != nil {
+						fatal(err)
+					}
 
-	if len(os.Args) > 1 {
-		file, err := os.Open(os.Args[1])
-		if err != nil {
-			panic(err)
-		}
+					source = file
+				} else {
+					source = os.Stdin
+				}
 
-		source = file
-	} else {
-		source = os.Stdin
+				generate(source)
+			},
+		},
+		{
+			Name:      "deploy",
+			ShortName: "d",
+			Usage:     "deploy a CloudFormation template",
+			Flags: []cli.Flag{
+				cli.StringFlag{"name", "", "name of stack to deploy"},
+				cli.StringFlag{"template", "", "template to deploy (default: stdin)"},
+			},
+			Action: func(c *cli.Context) {
+				name := c.String("name")
+				if name == "" {
+					cli.ShowCommandHelp(c, "deploy")
+					os.Exit(1)
+				}
+
+				var source io.Reader
+
+				if c.String("template") != "" {
+					file, err := os.Open(c.String("template"))
+					if err != nil {
+						fatal(err)
+					}
+
+					source = file
+				} else {
+					source = os.Stdin
+				}
+
+				deploy(name, source)
+			},
+		},
 	}
 
-	err = candiedyaml.NewDecoder(source).Decode(&spec)
-	if err != nil {
-		panic(err)
-	}
+	app.Run(os.Args)
+}
 
-	former := aws.New(spec.Description)
-
-	region := os.Getenv("AWS_DEFAULT_REGION")
-	if region == "" {
-		region = "us-east-1"
-	}
-
-	builder := Builder{
-		Region: region,
-		Spec:   spec,
-	}
-
-	err = builder.Build(former)
-	if err != nil {
-		panic(err)
-	}
-
-	payload, err := json.Marshal(former.Template)
-	if err != nil {
-		panic(err)
-	}
-
-	deployer := deployer.New(cloudformation.NewFromEnv())
-
-	events, err := deployer.Deploy(spec.Name, payload)
-	if err != nil {
-		panic(err)
-	}
-
-	ok := renderEvents(events)
-	if !ok {
-		fmt.Println()
-		fmt.Println(ansi.Color("formation failed and was rolled back", "yellow"))
-		os.Exit(1)
-	}
+func fatal(err interface{}) {
+	fmt.Fprintln(os.Stderr, "%s", err)
+	os.Exit(1)
 }

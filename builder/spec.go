@@ -1,4 +1,4 @@
-package main
+package builder
 
 type DeploymentSpec struct {
 	Name        string `yaml:"name"`
