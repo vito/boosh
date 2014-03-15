@@ -80,6 +80,6 @@ func main() {
 }
 
 func fatal(err interface{}) {
-	fmt.Fprintln(os.Stderr, "%s", err)
+	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
 }

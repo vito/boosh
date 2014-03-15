@@ -43,7 +43,7 @@ func (p Process) CompletedLabel() string {
 	case CreateProcess:
 		return "      create"
 	case RollbackProcess:
-		return "    collback"
+		return "    rollback"
 	}
 
 	panic("invalid process")
