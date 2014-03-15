@@ -1,7 +1,9 @@
 package main
 
 type DeploymentSpec struct {
-	Name   string `yaml:"name"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+
 	Domain string `yaml:"domain"`
 
 	VPC VPCSpec `yaml:"vpc"`
