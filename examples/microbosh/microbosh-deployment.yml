@@ -33,7 +33,7 @@ cloud:
       default_key_name: bosh
       default_security_groups: (( [Resources.SecurityGroupName.BOSH] ))
       region: (( Region ))
-      ec2_private_key: ./id_rsa_bosh
+      ec2_private_key: ./micro/id_rsa_bosh
     agent:
       ntp: &ntp
         - 0.north-america.pool.ntp.org

@@ -1,5 +1,3 @@
 bosh-deployments.yml
 bosh-registry.log
-cloudformation.json
 micro/
-microbosh-stub.yml

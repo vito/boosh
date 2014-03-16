@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e -x
+
+mkdir -p micro/
+
+# generate cloudformation template
+boosh generate --manifest microbosh-infrastructure.yml > micro/cloudformation.json
+
+# deploy infrastructure
+boosh deploy --name microbosh --template micro/cloudformation.json
+
+# generate stub to be fed into deployment templates
+boosh resources --name microbosh > micro/microbosh-stub.yml
+
+# generate microbosh deployment manifest
+spiff merge microbosh-deployment.yml micro/microbosh-stub.yml > micro/microbosh.yml
+bosh micro deployment micro/microbosh.yml
+
+# deploy microbosh!
+bosh micro deploy ami-2bf3fb42
