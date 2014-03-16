@@ -11,7 +11,6 @@ convenience.
 To install:
 
 ```bash
-go get -u -d github.com/vito/boosh
-cd $GOPATH/src/github.com/vito/boosh
-godep go install .
+go get github.com/kr/godep
+godep get github.com/vito/boosh
 ```
