@@ -1,10 +1,6 @@
 ---
 description: MicroBOSH
 
-meta:
-  vpc:
-    base: "10.11"
-
 elastic_ips:
   - name: Micro
 
