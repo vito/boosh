@@ -153,6 +153,15 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 
 				subnet.RouteTable().Instance(instance)
 			}
+
+			if x.RouteTable.InternetGateway != nil {
+				gateway, found := gateways[*x.RouteTable.InternetGateway]
+				if !found {
+					return fmt.Errorf("unknown gateway: %s", *x.RouteTable.InternetGateway)
+				}
+
+				subnet.RouteTable().InternetGateway(gateway)
+			}
 		}
 
 		subnets[x.Name] = subnet
