@@ -7,7 +7,8 @@ export AWS_SECRET_ACCESS_KEY=xxx
 export AWS_DEFAULT_REGION=us-east-1
 
 # generate a keypair and import it as 'bosh'
-ssh-keygen -t rsa -f id_rsa_bosh -N ''
+mkdir -p micro/
+ssh-keygen -t rsa -f micro/id_rsa_bosh -N ''
 
 # deploy a MicroBOSH
 ./deploy
