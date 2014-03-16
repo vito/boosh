@@ -28,10 +28,7 @@ func generate(source io.Reader) {
 		region = "us-east-1"
 	}
 
-	builder := builder.Builder{
-		Region: region,
-		Spec:   spec,
-	}
+	builder := builder.New(spec, region)
 
 	err = builder.Build(former)
 	if err != nil {

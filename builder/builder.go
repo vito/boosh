@@ -22,36 +22,95 @@ var NAT_AMIS = map[string]string{
 }
 
 type Builder struct {
-	Region string
-	Spec   DeploymentSpec
+	spec   DeploymentSpec
+	region string
+
+	vpc            cloudformer.VPC
+	instances      map[string]cloudformer.Instance
+	gateways       map[string]cloudformer.InternetGateway
+	subnets        map[string]cloudformer.Subnet
+	securityGroups map[string]cloudformer.SecurityGroup
 }
 
-func (builder Builder) Build(former cloudformer.CloudFormer) error {
-	instances := make(map[string]cloudformer.Instance)
-	gateways := make(map[string]cloudformer.InternetGateway)
-	subnets := make(map[string]cloudformer.Subnet)
-	securityGroups := make(map[string]cloudformer.SecurityGroup)
+func New(spec DeploymentSpec, region string) *Builder {
+	return &Builder{
+		region: region,
+		spec:   spec,
 
-	vpc := former.VPC("")
-	vpc.Network(cloudformer.CIDR(builder.Spec.VPC.CIDR))
+		instances:      make(map[string]cloudformer.Instance),
+		gateways:       make(map[string]cloudformer.InternetGateway),
+		subnets:        make(map[string]cloudformer.Subnet),
+		securityGroups: make(map[string]cloudformer.SecurityGroup),
+	}
+}
 
-	vpc.AssociateDHCPOptions(cloudformer.DHCPOptions{
-		DomainNameServers: builder.Spec.DNS,
-	})
+func (builder *Builder) Build(former cloudformer.CloudFormer) error {
+	var err error
 
-	for _, x := range builder.Spec.InternetGateways {
-		gateways[x.Name] = former.InternetGateway(x.Name)
+	err = builder.buildInternetGateways(former)
+	if err != nil {
+		return err
 	}
 
-	vpcGateway, found := gateways[builder.Spec.VPC.InternetGateway]
+	err = builder.buildVPC(former)
+	if err != nil {
+		return err
+	}
+
+	err = builder.buildSecurityGroups(former)
+	if err != nil {
+		return err
+	}
+
+	err = builder.buildSubnets(former)
+	if err != nil {
+		return err
+	}
+
+	err = builder.buildLoadBalancers(former)
+	if err != nil {
+		return err
+	}
+
+	err = builder.buildElasticIPs(former)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (builder *Builder) buildInternetGateways(former cloudformer.CloudFormer) error {
+	for _, x := range builder.spec.InternetGateways {
+		builder.gateways[x.Name] = former.InternetGateway(x.Name)
+	}
+
+	return nil
+}
+
+func (builder *Builder) buildVPC(former cloudformer.CloudFormer) error {
+	vpc := former.VPC("")
+	vpc.Network(cloudformer.CIDR(builder.spec.VPC.CIDR))
+
+	vpc.AssociateDHCPOptions(cloudformer.DHCPOptions{
+		DomainNameServers: builder.spec.DNS,
+	})
+
+	vpcGateway, found := builder.gateways[builder.spec.VPC.InternetGateway]
 	if !found {
-		return fmt.Errorf("unknown gateway for VPC: %s", builder.Spec.VPC.InternetGateway)
+		return fmt.Errorf("unknown gateway for VPC: %s", builder.spec.VPC.InternetGateway)
 	}
 
 	vpc.AttachInternetGateway(vpcGateway)
 
-	for _, x := range builder.Spec.SecurityGroups {
-		group := vpc.SecurityGroup(x.Name)
+	builder.vpc = vpc
+
+	return nil
+}
+
+func (builder *Builder) buildSecurityGroups(cloudformer.CloudFormer) error {
+	for _, x := range builder.spec.SecurityGroups {
+		group := builder.vpc.SecurityGroup(x.Name)
 
 		for _, i := range x.Ingress {
 			fromPort, toPort, err := parsePortRange(i.Ports)
@@ -81,15 +140,19 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 			)
 		}
 
-		securityGroups[x.Name] = group
+		builder.securityGroups[x.Name] = group
 	}
 
-	natAMI, found := NAT_AMIS[builder.Region]
+	return nil
+}
+
+func (builder *Builder) buildSubnets(former cloudformer.CloudFormer) error {
+	natAMI, found := NAT_AMIS[builder.region]
 	if !found {
-		return fmt.Errorf("unknown NAT image for region: %s", builder.Region)
+		return fmt.Errorf("unknown NAT image for region: %s", builder.region)
 	}
 
-	for _, x := range builder.Spec.Subnets {
+	for _, x := range builder.spec.Subnets {
 		if x.NAT == nil {
 			continue
 		}
@@ -98,13 +161,13 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 			continue
 		}
 
-		subnet := vpc.Subnet(x.Name)
+		subnet := builder.vpc.Subnet(x.Name)
 		subnet.Network(cloudformer.CIDR(x.CIDR))
 		subnet.AvailabilityZone(x.AvailabilityZone)
 
 		if x.RouteTable != nil {
 			if x.RouteTable.InternetGateway != nil {
-				gateway, found := gateways[*x.RouteTable.InternetGateway]
+				gateway, found := builder.gateways[*x.RouteTable.InternetGateway]
 				if !found {
 					return fmt.Errorf("unknown gateway: %s", *x.RouteTable.InternetGateway)
 				}
@@ -120,7 +183,7 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 		nat.Image(natAMI)
 		nat.SourceDestCheck(false)
 
-		securityGroup, found := securityGroups[x.NAT.SecurityGroup]
+		securityGroup, found := builder.securityGroups[x.NAT.SecurityGroup]
 		if !found {
 			return fmt.Errorf("unknown security group: %s", x.NAT.SecurityGroup)
 		}
@@ -131,22 +194,22 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 		ip.Domain("vpc")
 		ip.AttachTo(nat)
 
-		instances[x.NAT.Name] = nat
-		subnets[x.Name] = subnet
+		builder.instances[x.NAT.Name] = nat
+		builder.subnets[x.Name] = subnet
 	}
 
-	for _, x := range builder.Spec.Subnets {
+	for _, x := range builder.spec.Subnets {
 		if x.NAT != nil {
 			continue
 		}
 
-		subnet := vpc.Subnet(x.Name)
+		subnet := builder.vpc.Subnet(x.Name)
 		subnet.Network(cloudformer.CIDR(x.CIDR))
 		subnet.AvailabilityZone(x.AvailabilityZone)
 
 		if x.RouteTable != nil {
 			if x.RouteTable.Instance != nil {
-				instance, found := instances[*x.RouteTable.Instance]
+				instance, found := builder.instances[*x.RouteTable.Instance]
 				if !found {
 					return fmt.Errorf("unknown instance: %s", *x.RouteTable.Instance)
 				}
@@ -155,7 +218,7 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 			}
 
 			if x.RouteTable.InternetGateway != nil {
-				gateway, found := gateways[*x.RouteTable.InternetGateway]
+				gateway, found := builder.gateways[*x.RouteTable.InternetGateway]
 				if !found {
 					return fmt.Errorf("unknown gateway: %s", *x.RouteTable.InternetGateway)
 				}
@@ -164,14 +227,18 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 			}
 		}
 
-		subnets[x.Name] = subnet
+		builder.subnets[x.Name] = subnet
 	}
 
-	for _, x := range builder.Spec.LoadBalancers {
+	return nil
+}
+
+func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error {
+	for _, x := range builder.spec.LoadBalancers {
 		balancer := former.LoadBalancer(x.Name)
 
 		for _, name := range x.Subnets {
-			subnet, found := subnets[name]
+			subnet, found := builder.subnets[name]
 			if !found {
 				return fmt.Errorf("unknown subnet: %s", name)
 			}
@@ -199,7 +266,7 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 		}
 
 		for _, name := range x.SecurityGroups {
-			securityGroup, found := securityGroups[name]
+			securityGroup, found := builder.securityGroups[name]
 			if !found {
 				return fmt.Errorf("unknown security group: %s", name)
 			}
@@ -217,17 +284,20 @@ func (builder Builder) Build(former cloudformer.CloudFormer) error {
 		})
 
 		if x.DNSRecord != "" {
-			balancer.RecordSet(x.DNSRecord, builder.Spec.Domain)
+			balancer.RecordSet(x.DNSRecord, builder.spec.Domain)
 		}
-	}
-
-	for _, x := range builder.Spec.ElasticIPs {
-		former.ElasticIP(x.Name).Domain("vpc")
 	}
 
 	return nil
 }
 
+func (builder *Builder) buildElasticIPs(former cloudformer.CloudFormer) error {
+	for _, x := range builder.spec.ElasticIPs {
+		former.ElasticIP(x.Name).Domain("vpc")
+	}
+
+	return nil
+}
 func parsePortRange(ports string) (uint16, uint16, error) {
 	segments := strings.Split(ports, "-")
 
