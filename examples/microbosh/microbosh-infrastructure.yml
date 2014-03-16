@@ -1,0 +1,37 @@
+---
+description: MicroBOSH
+
+meta:
+  vpc:
+    base: "10.11"
+
+elastic_ips:
+  - name: Micro
+
+vpc:
+  cidr: 10.11.0.0/16
+  internet_gateway: VPCGateway
+
+internet_gateways:
+  - name: VPCGateway
+
+subnets:
+  - name: BOSHZ1
+    cidr: 10.11.0.0/24
+    availability_zone: us-east-1a
+    route_table:
+      internet_gateway: VPCGateway
+
+dns:
+  - 10.11.0.2
+  - 10.11.0.6
+
+security_groups:
+  - name: BOSH
+    ingress:
+      - protocol: tcp
+        ports: 0-65535
+        cidr: 0.0.0.0/0
+      - protocol: udp
+        ports: 0-65535
+        cidr: 0.0.0.0/0

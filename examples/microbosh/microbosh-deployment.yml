@@ -1,0 +1,62 @@
+---
+Region: (( merge ))
+Resources: (( merge ))
+AccessKeyID: (( merge ))
+SecretAccessKey: (( merge ))
+
+name: micro
+
+logging:
+  level: DEBUG
+
+network:
+  type: manual
+  vip: (( Resources.EIP.Micro ))
+  ip: (( Resources.SubnetOctets.BOSHZ1.[2] ".6" ))
+  dns:
+    - (( Resources.SubnetOctets.BOSHZ1.[2] ".2" ))
+  cloud_properties:
+    subnet: (( Resources.Subnet.BOSHZ1 ))
+
+resources:
+  persistent_disk: 20000
+  cloud_properties:
+    instance_type: m1.small
+    availability_zone: (( Resources.SubnetAvailabilityZone.BOSHZ1 ))
+
+cloud:
+  plugin: aws
+  properties:
+    aws: &aws
+      access_key_id: (( AccessKeyID ))
+      secret_access_key: (( SecretAccessKey ))
+      default_key_name: bosh
+      default_security_groups: (( [Resources.SecurityGroupName.BOSH] ))
+      region: (( Region ))
+      ec2_private_key: ~/workspace/deployments-runtime/diego-ci/keypair/id_rsa_bosh
+    agent:
+      ntp: &ntp
+        - 0.north-america.pool.ntp.org
+        - 1.north-america.pool.ntp.org
+        - 2.north-america.pool.ntp.org
+        - 3.north-america.pool.ntp.org
+
+apply_spec:
+  agent:
+    blobstore:
+      address: (( Resources.SubnetOctets.BOSHZ1.[2] ".6" ))
+    nats:
+      address: (( Resources.SubnetOctets.BOSHZ1.[2] ".6" ))
+  properties:
+    aws: *aws
+    ntp: *ntp
+    registry:
+      address: (( Resources.SubnetOctets.BOSHZ1.[2] ".6" ))
+    hm:
+      resurrector_enabled: true
+      director_account:
+        user: hm
+        password: hm-password
+
+    director:
+      enable_snapshots: true
