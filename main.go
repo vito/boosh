@@ -74,6 +74,23 @@ func main() {
 				deploy(name, source)
 			},
 		},
+		{
+			Name:      "resources",
+			ShortName: "r",
+			Usage:     "create a stub from a stack's resources",
+			Flags: []cli.Flag{
+				cli.StringFlag{"name", "", "name of stack"},
+			},
+			Action: func(c *cli.Context) {
+				name := c.String("name")
+				if name == "" {
+					cli.ShowCommandHelp(c, "resources")
+					os.Exit(1)
+				}
+
+				resources(name)
+			},
+		},
 	}
 
 	app.Run(os.Args)
