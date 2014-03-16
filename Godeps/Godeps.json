@@ -1,0 +1,34 @@
+{
+	"ImportPath": "github.com/vito/boosh",
+	"GoVersion": "go1.2",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.0.0-39-g8f0575f",
+			"Rev": "8f0575f520013467eb175a5dd30158ed816eeda9"
+		},
+		{
+			"ImportPath": "github.com/dynport/gocloud/aws",
+			"Rev": "4d1bbede6af866b5fe2657a31c98f1eedace4e3b"
+		},
+		{
+			"ImportPath": "github.com/fraenkel/candiedyaml",
+			"Rev": "a6b7568d88e42b0f7d7cf5d127d667e6d4562486"
+		},
+		{
+			"ImportPath": "github.com/hotei/ansiterm",
+			"Rev": "3c55e04fe29e3fdeb3035b8c05d3cade39093337"
+		},
+		{
+			"ImportPath": "github.com/mgutz/ansi",
+			"Rev": "376eb392d7d7e2ae025da0037c73cf8c20a428d8"
+		},
+		{
+			"ImportPath": "github.com/vito/cloudformer",
+			"Rev": "3a62f03b69453ef3ba316e8cf08df7a5f39c7afe"
+		}
+	]
+}
