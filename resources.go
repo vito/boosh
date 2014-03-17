@@ -96,9 +96,11 @@ func grabSecurityGroupNames(stub map[string]map[string]interface{}, ec2Client *e
 func grabSubnetInfo(stub map[string]map[string]interface{}, ec2Client *ec2.Client) error {
 	zones := make(map[string]interface{})
 	octets := make(map[string]interface{})
+	cidrs := make(map[string]interface{})
 
 	stub["SubnetAvailabilityZone"] = zones
 	stub["SubnetOctets"] = octets
+	stub["SubnetCIDR"] = cidrs
 
 	subnetIds := []string{}
 	nameForId := make(map[string]string)
@@ -123,13 +125,14 @@ func grabSubnetInfo(stub map[string]map[string]interface{}, ec2Client *ec2.Clien
 
 	for _, subnet := range subnets.Subnets {
 		name := nameForId[subnet.SubnetId]
-		zones[name] = subnet.AvailabilityZone
 
 		_, ipNet, err := net.ParseCIDR(subnet.CidrBlock)
 		if err != nil {
 			return err
 		}
 
+		zones[name] = subnet.AvailabilityZone
+		cidrs[name] = subnet.CidrBlock
 		octets[name] = []string{
 			fmt.Sprintf("%d", ipNet.IP[0]),
 			fmt.Sprintf("%d.%d", ipNet.IP[0], ipNet.IP[1]),
