@@ -298,6 +298,7 @@ func (builder *Builder) buildElasticIPs(former cloudformer.CloudFormer) error {
 
 	return nil
 }
+
 func parsePortRange(ports string) (uint16, uint16, error) {
 	segments := strings.Split(ports, "-")
 

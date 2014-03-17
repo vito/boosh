@@ -93,6 +93,5 @@ type LoadBalancerHealthCheckTargetSpec struct {
 }
 
 type ElasticIPSpec struct {
-	Name      string `yaml:"name"`
-	DNSRecord string `yaml:"dns_record"`
+	Name string `yaml:"name"`
 }
