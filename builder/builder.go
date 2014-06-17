@@ -77,6 +77,11 @@ func (builder *Builder) Build(former cloudformer.CloudFormer) error {
 		return err
 	}
 
+	err = builder.buildBuckets(former)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -262,6 +267,7 @@ func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error
 				listener.Port,
 				cloudformer.ProtocolType(destinationProtocol),
 				destinationPort,
+				listener.SSLCertificateId,
 			)
 		}
 
@@ -275,8 +281,9 @@ func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error
 		}
 
 		balancer.HealthCheck(cloudformer.HealthCheck{
-			Protocol:           cloudformer.ProtocolType(x.HealthCheck.Target.Type),
+			Protocol:           cloudformer.ProtocolType(x.HealthCheck.Target.Protocol),
 			Port:               x.HealthCheck.Target.Port,
+			Path:               x.HealthCheck.Target.Path,
 			Interval:           time.Duration(x.HealthCheck.Interval) * time.Second,
 			Timeout:            time.Duration(x.HealthCheck.Timeout) * time.Second,
 			HealthyThreshold:   x.HealthCheck.HealthyThreshold,
@@ -294,6 +301,14 @@ func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error
 func (builder *Builder) buildElasticIPs(former cloudformer.CloudFormer) error {
 	for _, x := range builder.spec.ElasticIPs {
 		former.ElasticIP(x.Name).Domain("vpc")
+	}
+
+	return nil
+}
+
+func (builder *Builder) buildBuckets(former cloudformer.CloudFormer) error {
+	for _, x := range builder.spec.Buckets {
+		former.S3Bucket(x.Name).Name(x.BucketName)
 	}
 
 	return nil

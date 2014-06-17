@@ -50,6 +50,17 @@ func (cloudFormer *AWSCloudFormer) VPC(name string) cloudformer.VPC {
 	return vpc
 }
 
+func (cloudFormer *AWSCloudFormer) S3Bucket(name string) cloudformer.S3Bucket {
+	s3Bucket := S3Bucket{
+		name:  name,
+		model: &models.S3Bucket{},
+	}
+
+	cloudFormer.resources[name+"S3Bucket"] = s3Bucket.model
+
+	return s3Bucket
+}
+
 func (cloudFormer *AWSCloudFormer) ElasticIP(name string) cloudformer.ElasticIP {
 	ip := ElasticIP{
 		name:      name,

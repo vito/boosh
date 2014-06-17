@@ -171,6 +171,7 @@ type LoadBalancerListener struct {
 	LoadBalancerPort string `json:"LoadBalancerPort,omitempty"`
 	Protocol         string `json:"Protocol,omitempty"`
 	InstanceProtocol string `json:"InstanceProtocol,omitempty"`
+	SSLCertificateId string `json:"SSLCertificateId,omitempty"`
 }
 
 func (LoadBalancer) Type() string {
@@ -338,4 +339,16 @@ type RecordSet struct {
 type RecordSetAliasTarget struct {
 	HostedZoneId interface{} `json:"HostedZoneId,omitempty"`
 	DNSName      interface{} `json:"DNSName,omitempty"`
+}
+
+type S3Bucket struct {
+	BucketName string `json:"BucketName,omitempty"`
+}
+
+func (S3Bucket) Type() string {
+	return "AWS::S3::Bucket"
+}
+
+func (S3Bucket) DependsOn() string {
+	return ""
 }

@@ -19,6 +19,8 @@ type DeploymentSpec struct {
 	LoadBalancers []LoadBalancerSpec `yaml:"load_balancers"`
 
 	ElasticIPs []ElasticIPSpec `yaml:"elastic_ips"`
+
+	Buckets []BucketSpec `yaml:"buckets"`
 }
 
 type VPCSpec struct {
@@ -77,6 +79,7 @@ type LoadBalancerListenerSpec struct {
 	Port                uint16  `yaml:"port"`
 	DestinationProtocol *string `yaml:"destination_protocol,omitempty"`
 	DestinationPort     *uint16 `yaml:"destination_port,omitempty"`
+	SSLCertificateId    string  `yaml:"ssl_certificate_id,omitempty"`
 }
 
 type LoadBalancerHealthCheckSpec struct {
@@ -88,10 +91,16 @@ type LoadBalancerHealthCheckSpec struct {
 }
 
 type LoadBalancerHealthCheckTargetSpec struct {
-	Type string `yaml:"type"`
-	Port uint16 `yaml:"port"`
+	Protocol string `yaml:"protocol"`
+	Port     uint16 `yaml:"port"`
+	Path     string `yaml:"path,omitempty"`
 }
 
 type ElasticIPSpec struct {
 	Name string `yaml:"name"`
+}
+
+type BucketSpec struct {
+	Name       string `yaml:"name"`
+	BucketName string `yaml:"bucket_name,omitempty"`
 }

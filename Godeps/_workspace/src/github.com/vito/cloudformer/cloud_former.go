@@ -10,6 +10,7 @@ type CloudFormer interface {
 	VPC(name string) VPC
 	ElasticIP(name string) ElasticIP
 	LoadBalancer(name string) LoadBalancer
+	S3Bucket(name string) S3Bucket
 }
 
 type InternetGateway interface{}
@@ -62,7 +63,7 @@ type ElasticIP interface {
 }
 
 type LoadBalancer interface {
-	Listener(ProtocolType, uint16, ProtocolType, uint16)
+	Listener(ProtocolType, uint16, ProtocolType, uint16, string)
 	HealthCheck(HealthCheck)
 	Subnet(Subnet)
 	SecurityGroup(SecurityGroup)
@@ -72,6 +73,7 @@ type LoadBalancer interface {
 type HealthCheck struct {
 	Protocol           ProtocolType
 	Port               uint16
+	Path               string
 	Timeout            time.Duration
 	Interval           time.Duration
 	HealthyThreshold   int
@@ -82,3 +84,7 @@ type ProtocolType string
 
 const TCP = ProtocolType("tcp")
 const UDP = ProtocolType("udp")
+
+type S3Bucket interface {
+	Name(string)
+}
