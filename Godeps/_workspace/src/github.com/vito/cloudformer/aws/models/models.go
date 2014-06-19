@@ -341,14 +341,14 @@ type RecordSetAliasTarget struct {
 	DNSName      interface{} `json:"DNSName,omitempty"`
 }
 
-type S3Bucket struct {
+type Bucket struct {
 	BucketName string `json:"BucketName,omitempty"`
 }
 
-func (S3Bucket) Type() string {
+func (Bucket) Type() string {
 	return "AWS::S3::Bucket"
 }
 
-func (S3Bucket) DependsOn() string {
+func (Bucket) DependsOn() string {
 	return ""
 }

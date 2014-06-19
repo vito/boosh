@@ -50,13 +50,13 @@ func (cloudFormer *AWSCloudFormer) VPC(name string) cloudformer.VPC {
 	return vpc
 }
 
-func (cloudFormer *AWSCloudFormer) S3Bucket(name string) cloudformer.S3Bucket {
-	s3Bucket := S3Bucket{
+func (cloudFormer *AWSCloudFormer) Bucket(name string) cloudformer.Bucket {
+	s3Bucket := Bucket{
 		name:  name,
-		model: &models.S3Bucket{},
+		model: &models.Bucket{},
 	}
 
-	cloudFormer.resources[name+"S3Bucket"] = s3Bucket.model
+	cloudFormer.resources[name+"Bucket"] = s3Bucket.model
 
 	return s3Bucket
 }

@@ -308,7 +308,7 @@ func (builder *Builder) buildElasticIPs(former cloudformer.CloudFormer) error {
 
 func (builder *Builder) buildBuckets(former cloudformer.CloudFormer) error {
 	for _, x := range builder.spec.Buckets {
-		former.S3Bucket(x.Name).Name(x.BucketName)
+		former.Bucket(x.Name).Name(x.BucketName)
 	}
 
 	return nil
