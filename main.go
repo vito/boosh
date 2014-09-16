@@ -21,9 +21,8 @@ func main() {
 			Usage:     "generate a CloudFormation template",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					"manifest",
-					"",
-					"manifest to use to generate a template (default: stdin)",
+					Name:  "manifest",
+					Usage: "manifest to use to generate a template (default: stdin)",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -48,8 +47,14 @@ func main() {
 			ShortName: "d",
 			Usage:     "deploy a CloudFormation template",
 			Flags: []cli.Flag{
-				cli.StringFlag{"name", "", "name of stack to deploy"},
-				cli.StringFlag{"template", "", "template to deploy (default: stdin)"},
+				cli.StringFlag{
+					Name:  "name",
+					Usage: "name of stack to deploy",
+				},
+				cli.StringFlag{
+					Name:  "template",
+					Usage: "template to deploy (default: stdin)",
+				},
 			},
 			Action: func(c *cli.Context) {
 				name := c.String("name")
@@ -75,11 +80,34 @@ func main() {
 			},
 		},
 		{
+			Name:      "watch",
+			ShortName: "w",
+			Usage:     "watch CloudFormation stack's events until completion",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "name",
+					Usage: "name of stack to watch",
+				},
+			},
+			Action: func(c *cli.Context) {
+				name := c.String("name")
+				if name == "" {
+					cli.ShowCommandHelp(c, "watch")
+					os.Exit(1)
+				}
+
+				watch(name)
+			},
+		},
+		{
 			Name:      "resources",
 			ShortName: "r",
 			Usage:     "create a stub from a stack's resources",
 			Flags: []cli.Flag{
-				cli.StringFlag{"name", "", "name of stack"},
+				cli.StringFlag{
+					Name:  "name",
+					Usage: "name of stack",
+				},
 			},
 			Action: func(c *cli.Context) {
 				name := c.String("name")
