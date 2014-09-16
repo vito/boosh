@@ -237,6 +237,21 @@ func (client *Client) putRequestHeaders(bucket, key string, options *PutOptions)
 	return headers
 }
 
+func (client *Client) Delete(bucket, key string) error {
+	req, e := http.NewRequest("DELETE", client.keyUrl(bucket, key), nil)
+	if e != nil {
+		return e
+	}
+	client.SignS3Request(req, bucket)
+
+	rsp, e := http.DefaultClient.Do(req)
+	if e != nil {
+		return e
+	}
+	defer rsp.Body.Close()
+	return nil
+}
+
 func (client *Client) Put(bucket, key string, data []byte, options *PutOptions) error {
 	if options == nil {
 		options = &PutOptions{ContentType: DEFAULT_CONTENT_TYPE}
@@ -298,6 +313,9 @@ var s3ParamsToSign = map[string]bool{
 func (client *Client) SignS3Request(req *http.Request, bucket string) {
 	t := time.Now().UTC()
 	date := t.Format(http.TimeFormat)
+	if client.Client.SecurityToken != "" {
+		req.Header.Set("x-amz-security-token", client.Client.SecurityToken)
+	}
 	payloadParts := []string{
 		req.Method,
 		req.Header.Get(HEADER_CONTENT_MD5),

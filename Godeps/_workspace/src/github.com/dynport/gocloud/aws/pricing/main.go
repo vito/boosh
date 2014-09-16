@@ -2,6 +2,7 @@ package pricing
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
 )
 
@@ -87,6 +88,8 @@ func LinuxReservedHeavy() (p *Pricing, e error) {
 	return loadPricesFor("linux-ri-heavy.json")
 }
 
+var callbackRe = regexp.MustCompile("^(.*callback\\)?m)")
+
 func loadPricesFor(t string) (p *Pricing, e error) {
 	b, e := readAsset(t)
 	if e != nil {
@@ -106,19 +109,27 @@ func (config InstanceTypeConfigs) Swap(a, b int) {
 }
 
 var sortOrder = map[string]int{
-	"General purpose":   1,
-	"Compute optimized": 2,
-	"GPU instances":     3,
-	"Memory optimized":  4,
-	"Storage optimized": 5,
-	"Micro Instances":   6,
+	"t1":  1,
+	"t2":  2,
+	"m1":  3,
+	"m2":  4,
+	"m3":  5,
+	"c1":  6,
+	"c3":  7,
+	"cc2": 8,
+	"cg1": 9,
+	"cr1": 10,
+	"g2":  11,
+	"hi1": 12,
+	"hs1": 13,
+	"i2":  14,
 }
 
 func (config InstanceTypeConfigs) Less(a, b int) bool {
 	instanceA := config[a]
 	instanceB := config[b]
-	famA, okA := sortOrder[instanceA.Family]
-	famB, okB := sortOrder[instanceB.Family]
+	famA, okA := sortOrder[instanceA.Family()]
+	famB, okB := sortOrder[instanceB.Family()]
 	if okA && okB {
 		if famA == famB {
 			return instanceA.Cpus < instanceB.Cpus

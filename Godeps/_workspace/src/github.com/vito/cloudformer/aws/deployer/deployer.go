@@ -37,7 +37,7 @@ func (deployer *AWSDeployer) Deploy(name string, template []byte) (<-chan *cloud
 
 	events := make(chan *cloudformation.StackEvent)
 
-	go deployer.watchEvents(events, name)
+	go deployer.Watch(events, name)
 
 	if update {
 		_, err = deployer.client.UpdateStack(cloudformation.UpdateStackParameters{
@@ -69,7 +69,7 @@ func (deployer *AWSDeployer) Deploy(name string, template []byte) (<-chan *cloud
 	return events, nil
 }
 
-func (deployer *AWSDeployer) watchEvents(events chan<- *cloudformation.StackEvent, name string) {
+func (deployer *AWSDeployer) Watch(events chan<- *cloudformation.StackEvent, name string) {
 	start := time.Now()
 
 	nextToken := ""

@@ -7,16 +7,16 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.0.0-39-g8f0575f",
-			"Rev": "8f0575f520013467eb175a5dd30158ed816eeda9"
+			"Comment": "1.2.0-24-g7381bc4",
+			"Rev": "7381bc4e62942763475703c7edd405f1e42adf4f"
 		},
 		{
 			"ImportPath": "github.com/dynport/gocloud/aws",
-			"Rev": "4d1bbede6af866b5fe2657a31c98f1eedace4e3b"
+			"Rev": "129e6a64c3b238620ad59a9b22cbe8d65c25ea04"
 		},
 		{
 			"ImportPath": "github.com/fraenkel/candiedyaml",
-			"Rev": "a6b7568d88e42b0f7d7cf5d127d667e6d4562486"
+			"Rev": "84842532f8194fe186b48a009251dfaec9924ccd"
 		},
 		{
 			"ImportPath": "github.com/hotei/ansiterm",
@@ -28,7 +28,7 @@
 		},
 		{
 			"ImportPath": "github.com/vito/cloudformer",
-			"Rev": "d64a7cd7d4f8baf1619c7288c432cf7404272cbe"
+			"Rev": "ca8ffdc53caae750658d874c34d6dc529edf6543"
 		}
 	]
 }

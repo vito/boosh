@@ -2,8 +2,9 @@ package cloudwatch
 
 import (
 	"encoding/xml"
-	"github.com/dynport/gocloud/aws"
 	"net/url"
+
+	"github.com/dynport/gocloud/aws"
 )
 
 type Dimension struct {
@@ -26,6 +27,10 @@ type ListMetricsResponse struct {
 const (
 	VERSION = "2010-08-01"
 )
+
+func endpoint(client *aws.Client) string {
+	return "https://monitoring." + client.Region + ".amazonaws.com"
+}
 
 type Client struct {
 	*aws.Client
