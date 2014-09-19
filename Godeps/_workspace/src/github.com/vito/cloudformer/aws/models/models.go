@@ -156,6 +156,7 @@ type LoadBalancer struct {
 	Instances      interface{} `json:"Instances,omitempty"`
 	SecurityGroups interface{} `json:"SecurityGroups,omitempty"`
 	Listeners      interface{} `json:"Listeners,omitempty"`
+	Scheme         string      `json:"Scheme,omitempty"`
 }
 
 type LoadBalancerHealthCheck struct {

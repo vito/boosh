@@ -43,6 +43,10 @@ func (balancer LoadBalancer) HealthCheck(check cloudformer.HealthCheck) {
 	}
 }
 
+func (balancer LoadBalancer) Scheme(scheme string) {
+	balancer.model.Scheme = scheme
+}
+
 func (balancer LoadBalancer) Subnet(subnet cloudformer.Subnet) {
 	subnets := balancer.model.Subnets.([]interface{})
 

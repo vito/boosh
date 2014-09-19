@@ -293,6 +293,10 @@ func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error
 		if x.DNSRecord != "" {
 			balancer.RecordSet(x.DNSRecord, builder.spec.Domain)
 		}
+
+		if x.Scheme != "" {
+			balancer.Scheme(x.Scheme)
+		}
 	}
 
 	return nil

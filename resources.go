@@ -8,12 +8,14 @@ import (
 
 	"github.com/dynport/gocloud/aws/cloudformation"
 	"github.com/dynport/gocloud/aws/ec2"
+	"github.com/dynport/gocloud/aws/elb"
 	"github.com/fraenkel/candiedyaml"
 )
 
 func resources(name string) {
 	cf := cloudformation.NewFromEnv()
 	ec2Client := ec2.NewFromEnv()
+	elbClient := elb.NewFromEnv()
 
 	resources, err := cf.DescribeStackResources(
 		cloudformation.DescribeStackResourcesParameters{
@@ -54,6 +56,11 @@ func resources(name string) {
 		fatal(err)
 	}
 
+	err = grabLoadBalancerDNSNames(stub, elbClient)
+	if err != nil {
+		fatal(err)
+	}
+
 	err = candiedyaml.NewEncoder(os.Stdout).Encode(map[string]interface{}{
 		"Region":          ec2Client.Client.Region,
 		"AccessKeyID":     ec2Client.Client.Key,
@@ -89,6 +96,27 @@ func grabSecurityGroupNames(stub map[string]map[string]interface{}, ec2Client *e
 		name := nameForId[group.GroupId]
 		names[name] = group.GroupName
 	}
+
+	return nil
+}
+
+func grabLoadBalancerDNSNames(stub map[string]map[string]interface{}, elbClient *elb.Client) error {
+	lbs, err := elbClient.DescribeLoadBalancers()
+	if err != nil {
+		return err
+	}
+
+	allNames := map[string]string{}
+	for _, lb := range lbs {
+		allNames[lb.LoadBalancerName] = lb.DNSName
+	}
+
+	stackNames := map[string]interface{}{}
+	for name, id := range stub["LoadBalancer"] {
+		stackNames[name] = allNames[id.(string)]
+	}
+
+	stub["LoadBalancerDNSName"] = stackNames
 
 	return nil
 }

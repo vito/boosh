@@ -72,6 +72,7 @@ type LoadBalancerSpec struct {
 	HealthCheck    LoadBalancerHealthCheckSpec `yaml:"health_check"`
 	Subnets        []string                    `yaml:"subnets"`
 	SecurityGroups []string                    `yaml:"security_groups"`
+	Scheme         string                      `yaml:"scheme"`
 }
 
 type LoadBalancerListenerSpec struct {
