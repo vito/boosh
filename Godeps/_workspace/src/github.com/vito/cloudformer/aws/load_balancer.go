@@ -47,6 +47,10 @@ func (balancer LoadBalancer) Scheme(scheme string) {
 	balancer.model.Scheme = scheme
 }
 
+func (balancer LoadBalancer) CrossZone(crossZone bool) {
+	balancer.model.CrossZone = crossZone
+}
+
 func (balancer LoadBalancer) Subnet(subnet cloudformer.Subnet) {
 	subnets := balancer.model.Subnets.([]interface{})
 

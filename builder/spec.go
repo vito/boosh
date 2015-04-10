@@ -73,6 +73,7 @@ type LoadBalancerSpec struct {
 	Subnets        []string                    `yaml:"subnets"`
 	SecurityGroups []string                    `yaml:"security_groups"`
 	Scheme         string                      `yaml:"scheme"`
+	CrossZone      bool                        `yaml:"cross_zone"`
 }
 
 type LoadBalancerListenerSpec struct {

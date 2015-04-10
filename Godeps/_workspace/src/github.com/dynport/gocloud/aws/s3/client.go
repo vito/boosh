@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -37,13 +38,16 @@ const (
 type Client struct {
 	*aws.Client
 	CustomEndpointHost string
-	UseSsl             bool
 }
 
 func NewFromEnv() *Client {
-	return &Client{
+	cl := &Client{
 		Client: aws.NewFromEnv(),
 	}
+	if reg := os.Getenv("AWS_DEFAULT_REGION"); reg != "" {
+		cl.CustomEndpointHost = "s3-" + reg + ".amazonaws.com"
+	}
+	return cl
 }
 
 type Bucket struct {
@@ -67,11 +71,7 @@ func (client *Client) EndpointHost() string {
 }
 
 func (client *Client) Endpoint() string {
-	if client.UseSsl {
-		return "https://" + client.EndpointHost()
-	} else {
-		return "http://" + client.EndpointHost()
-	}
+	return "https://" + client.EndpointHost()
 }
 
 type PutOptions struct {
@@ -166,26 +166,15 @@ func (client *Client) readRequest(method, bucket, key string) (*http.Response, e
 }
 
 func (client *Client) keyUrl(bucket, key string) string {
-	if client.UseSsl {
-		return "https://" + client.EndpointHost() + "/" + bucket + "/" + key
-	}
-	return "http://" + bucket + "." + client.EndpointHost() + "/" + key
+	return "https://" + client.EndpointHost() + "/" + bucket + "/" + key
 }
 
 func (client *Client) PutStream(bucket, key string, r io.Reader, options *PutOptions) error {
 	if options == nil {
 		options = &PutOptions{ContentType: DEFAULT_CONTENT_TYPE}
 	}
-	theUrl := client.keyUrl(bucket, key)
-	req, e := http.NewRequest("PUT", theUrl, r)
-	if e != nil {
-		return e
-	}
-
-	req.Header = client.putRequestHeaders(bucket, key, options)
-
 	buf := bytes.NewBuffer(make([]byte, 0, MinPartSize))
-	_, e = io.CopyN(buf, r, MinPartSize)
+	_, e := io.CopyN(buf, r, MinPartSize)
 	if e == io.EOF {
 		// less than min multipart size => direct upload
 		return client.Put(bucket, key, buf.Bytes(), options)
@@ -249,6 +238,31 @@ func (client *Client) Delete(bucket, key string) error {
 		return e
 	}
 	defer rsp.Body.Close()
+	return nil
+}
+
+func (client *Client) Copy(srcBucket, srcKey, tgtBucket, tgtKey string) error {
+	theUrl := client.keyUrl(tgtBucket, tgtKey)
+	req, e := http.NewRequest("PUT", theUrl, nil)
+	if e != nil {
+		return e
+	}
+	req.Header.Add("x-amz-copy-source", srcBucket+"/"+srcKey)
+
+	client.SignS3Request(req, tgtBucket)
+	rsp, e := http.DefaultClient.Do(req)
+	if e != nil {
+		return e
+	}
+	defer rsp.Body.Close()
+
+	b, e := ioutil.ReadAll(rsp.Body)
+	if e != nil {
+		return e
+	}
+	if rsp.StatusCode != 200 {
+		return fmt.Errorf("error copying key: %s - %s", rsp.Status, string(b))
+	}
 	return nil
 }
 
@@ -335,9 +349,6 @@ func (client *Client) SignS3Request(req *http.Request, bucket string) {
 	query := normalizeParams(req.URL)
 	if query != "" {
 		path += "?" + query
-	}
-	if !client.UseSsl && bucket != "" {
-		path = "/" + bucket + path
 	}
 	payloadParts = append(payloadParts, path)
 	payload := strings.Join(payloadParts, "\n")

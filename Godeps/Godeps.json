@@ -1,18 +1,18 @@
 {
 	"ImportPath": "github.com/vito/boosh",
-	"GoVersion": "go1.2",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-24-g7381bc4",
-			"Rev": "7381bc4e62942763475703c7edd405f1e42adf4f"
+			"Comment": "1.2.0-95-g9b2bd2b",
+			"Rev": "9b2bd2b3489748d4d0a204fa4eb2ee9e89e0ebc6"
 		},
 		{
 			"ImportPath": "github.com/dynport/gocloud/aws",
-			"Rev": "129e6a64c3b238620ad59a9b22cbe8d65c25ea04"
+			"Rev": "63c359c87b578e38ff89b6ae693e5c10a200cfd9"
 		},
 		{
 			"ImportPath": "github.com/fraenkel/candiedyaml",
@@ -24,11 +24,25 @@
 		},
 		{
 			"ImportPath": "github.com/mgutz/ansi",
-			"Rev": "376eb392d7d7e2ae025da0037c73cf8c20a428d8"
+			"Rev": "22ddafb24adc4786c83841aa3021349818c898e4"
+		},
+		{
+			"ImportPath": "github.com/onsi/ginkgo",
+			"Comment": "v1.1.0-42-gdbb5c6c",
+			"Rev": "dbb5c6caf33238b57facc1d975b1aaca6b90288c"
+		},
+		{
+			"ImportPath": "github.com/onsi/gomega",
+			"Comment": "v1.0-39-gc853a76",
+			"Rev": "c853a76367c700fe446c27bc7e6fc8209ee4e0a1"
 		},
 		{
 			"ImportPath": "github.com/vito/cloudformer",
-			"Rev": "a8817f9cd711a259a32a560f3a074d13125386c0"
+			"Rev": "a359e7ef9fb45abb534b4ff8005729215424c81c"
+		},
+		{
+			"ImportPath": "github.com/vito/cmdtest",
+			"Rev": "6d025fad5c9c2d65a0e827f4d636747226222eec"
 		}
 	]
 }

@@ -69,6 +69,7 @@ type LoadBalancer interface {
 	SecurityGroup(SecurityGroup)
 	RecordSet(name, zone string)
 	Scheme(scheme string)
+	CrossZone(crossZone bool)
 }
 
 type HealthCheck struct {

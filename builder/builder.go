@@ -297,6 +297,8 @@ func (builder *Builder) buildLoadBalancers(former cloudformer.CloudFormer) error
 		if x.Scheme != "" {
 			balancer.Scheme(x.Scheme)
 		}
+
+		balancer.CrossZone(x.CrossZone)
 	}
 
 	return nil

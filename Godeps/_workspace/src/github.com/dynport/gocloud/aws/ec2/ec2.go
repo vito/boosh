@@ -91,6 +91,12 @@ type Instance struct {
 	SecurityGroups      []*SecurityGroup      `xml:"groupSet>item"`
 	Tags                []*Tag                `xml:"tagSet>item"`
 	NetworkInterfaces   []*NetworkInterface   `xml:"networkInterfaceSet>item"`
+	IamInstanceProfile  *IamInstanceProfile   `xml:"iamInstanceProfile"`
+}
+
+type IamInstanceProfile struct {
+	Arn string `xml:"arn"`
+	Id  string `xml:"id"`
 }
 
 func (instance *Instance) Name() string {
@@ -173,6 +179,7 @@ const (
 
 type Ebs struct {
 	SnapshotId          string `xml:"snapshotId,omitempty" json:",omitempty"`
+	VolumeId            string `xml:"volumeId,omitempty"`
 	VolumeSize          int    `xml:"volumeSize,omitempty" json:",omitempty"`
 	DeleteOnTermination bool   `xml:"deleteOnTermination,omitempty" json:",omitempty"`
 	VolumeType          string `xml:"volumeType,omitempty json:",omitempty""` // see VolumeType... (e.g. gp, io1, standard)
