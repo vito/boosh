@@ -6,6 +6,10 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/cloudfoundry-incubator/candiedyaml",
+			"Rev": "84842532f8194fe186b48a009251dfaec9924ccd"
+		},
+		{
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-95-g9b2bd2b",
 			"Rev": "9b2bd2b3489748d4d0a204fa4eb2ee9e89e0ebc6"
@@ -13,10 +17,6 @@
 		{
 			"ImportPath": "github.com/dynport/gocloud/aws",
 			"Rev": "63c359c87b578e38ff89b6ae693e5c10a200cfd9"
-		},
-		{
-			"ImportPath": "github.com/fraenkel/candiedyaml",
-			"Rev": "84842532f8194fe186b48a009251dfaec9924ccd"
 		},
 		{
 			"ImportPath": "github.com/hotei/ansiterm",

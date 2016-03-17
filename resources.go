@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/dynport/gocloud/aws/cloudformation"
 	"github.com/dynport/gocloud/aws/ec2"
 	"github.com/dynport/gocloud/aws/elb"
-	"github.com/fraenkel/candiedyaml"
 )
 
 func resources(name string) {
