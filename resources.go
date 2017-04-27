@@ -17,8 +17,8 @@ func resources(name string) {
 	ec2Client := ec2.NewFromEnv()
 	elbClient := elb.NewFromEnv()
 
-	resources, err := cf.DescribeStackResources(
-		cloudformation.DescribeStackResourcesParameters{
+	resources, err := cf.ListStackResources(
+		cloudformation.ListStackResourcesParameters{
 			StackName: name,
 		},
 	)
@@ -28,7 +28,7 @@ func resources(name string) {
 
 	stub := make(map[string]map[string]interface{})
 
-	for _, resource := range resources.DescribeStackResourcesResult.StackResources {
+	for _, resource := range resources.StackResources {
 		typeSegments := strings.Split(resource.ResourceType, "::")
 		typeBase := typeSegments[len(typeSegments)-1]
 
